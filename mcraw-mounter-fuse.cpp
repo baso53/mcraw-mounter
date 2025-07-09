@@ -156,7 +156,7 @@ static int load_frame(FSContext *ctx, const std::string &path)
         return -ENOENT;
 
     // decode raw + per‐frame metadata
-    std::vector<uint16_t> raw;
+    std::vector<uint8_t> raw;
     nlohmann::json metadata;
     try
     {

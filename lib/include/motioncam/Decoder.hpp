@@ -41,6 +41,7 @@ namespace motioncam {
     class AudioChunkLoader {
         public:
             virtual bool next(AudioChunk& output) = 0;
+            virtual ~AudioChunkLoader() = default;
     };
     
     class Decoder {
@@ -57,7 +58,7 @@ namespace motioncam {
         const std::vector<Timestamp>& getFrames() const;
         
         // Load a single frame and its metadata.
-        void loadFrame(const Timestamp timestamp, std::vector<uint16_t>& outData, nlohmann::json& outMetadata);
+        void loadFrame(const Timestamp timestamp, std::vector<uint8_t>& outData, nlohmann::json& outMetadata);
         
         // Audio sample rate
         int audioSampleRateHz() const;
