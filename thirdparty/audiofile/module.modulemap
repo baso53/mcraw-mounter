@@ -1,0 +1,12 @@
+//
+//  module.modulemap
+//  fskit13extension
+//
+//  Created by sebastijan on 29.08.2025..
+//
+
+module AudioFileModule {
+    header "AudioFile.h"
+
+    export *
+}

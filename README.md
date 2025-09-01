@@ -1,32 +1,31 @@
-# MotionCam MCRAW decoder
+# FSKit Sample
 
-A simple library for decoding files recorded by [MotionCam Pro](https://www.motioncamapp.com/).
+FSKit is the new framework introduced in macOS Sequoia 15.4 that enables the developer to provide custom filesystem support from user space. The document is almost non-existent at the moment so here is a sample project to show how to use the framework.
 
-## Usage
+`UnaryFilesystemExtension` is the entry point of your custom filesystem. The implementation should return an instance of your custom filesystem implementation.
 
-Look in `example.cpp` for a simple example on how to extract the RAW frames into DNGs and the audio into a WAV file.
+The filesystem should be a subclass of `FSUnaryFileSystem` and conforms to necessary protocols, specifically `FSUnaryFileSystemOperations` as the system invokes that when deciding if the custom FS should be used, and get the volume from the extension.
 
-To build the example:
+From there, you can create your own subclass of `FSVolume` to help manage your volume and conform to `FSVolume.Operations` to support the basic volume specific operations. For a fully functional volume implementation, you’ll probably need to conform to most of the `FSVolume.*Operations`.
+
+Once you build and run the app, enable the File System extension under `System Settings -> General -> Login Items & Extensions -> File System Extensions`. After that you should be able to mount the FS with something like these (`disk18` is a block device)
 
 ```
-mkdir build
-
-cd build
-
-cmake ..
-
-make
+mkdir /tmp/TestVol
+mount -F -t MyFS disk18 /tmp/TestVol
 ```
 
-To extract the first frame and audio from a `.mcraw` file run:
+And unmount them with
 
-`./example <path to mcraw file> -n 1`
+```
+umount /tmp/TestVol
+```
 
+To create a dummy block device to test this, you can do the following
 
-## Sample Files
+```
+mkfile -n 100m dummy // create a dummy file
+hdiutil attach -imagekey diskimage-class=CRawDiskImage -nomount dummy // mount the newly created file as a raw block device
+```
 
-You can download a sample file from [here](https://storage.googleapis.com/motioncamapp.com/samples/007-VIDEO_24mm-240328_141729.0.mcraw).
-
-## MotionCam Pro
-
-MotionCam Pro is an app for Android that provides the ability to record RAW videos. Get it from the [Play Store](https://play.google.com/store/apps/details?id=com.motioncam.pro&hl=en&gl=US).
+and then use it with your FS.

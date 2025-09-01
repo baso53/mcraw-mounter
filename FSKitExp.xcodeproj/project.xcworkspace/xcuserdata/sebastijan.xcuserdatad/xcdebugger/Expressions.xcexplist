@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VariablesViewState
+   version = "1.0">
+   <ContextStates>
+      <ContextState
+         contextName = "MyFSVolume.init(resource:):MyFSVolume.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "print(containerMetadata)">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "MyFSVolume.createItem(named:type:inDirectory:attributes:):MyFSVolume.swift">
+      </ContextState>
+   </ContextStates>
+</VariablesViewState>

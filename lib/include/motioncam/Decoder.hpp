@@ -18,15 +18,28 @@
 #define Decoder_hpp
 
 #include <motioncam/Container.hpp>
-#include <nlohmann/json.hpp>
 
 #include <string>
 #include <vector>
 #include <map>
 
+struct FileDeleter {
+    void operator()(FILE* file) const {
+        if (file) fclose(file);
+    }
+};
+
+using unique_file = std::unique_ptr<FILE, FileDeleter>;
+
 namespace motioncam {
     typedef int64_t Timestamp;
+    typedef std::vector<uint8_t> FrameOutData;
     typedef std::pair<Timestamp, std::vector<int16_t>> AudioChunk;
+    typedef std::ostringstream OssStream;
+    typedef std::vector<uint8_t> CFA;
+    typedef uint16_t BPS[1];
+    typedef uint32_t ActiveArea[4];
+    typedef unsigned long Count;
 
     class MotionCamException : public std::runtime_error {
     public:
@@ -48,30 +61,25 @@ namespace motioncam {
     public:
         Decoder(const std::string& path);
         Decoder(FILE* file);
-        
-        ~Decoder();
-                
+
         // Get container metadata
-        const nlohmann::json& getContainerMetadata() const;
+        const std::string getContainerMetadata() const;
         
         // Get all frame timestamps in container
-        const std::vector<Timestamp>& getFrames() const;
+        const std::vector<Timestamp> getFrames() const;
         
         // Load a single frame and its metadata.
-        void loadFrame(const Timestamp timestamp, std::vector<uint8_t>& outData, nlohmann::json& outMetadata);
+        void loadFrame(const Timestamp timestamp, std::vector<uint8_t>& outData, int width, int height, int compressionType);
         
-        // Audio sample rate
-        int audioSampleRateHz() const;
-        
-        // Number of channels in audio
-        int numAudioChannels() const;
-        
+        // Load a single frame and its metadata.
+        const std::string loadFrameMetadata(const Timestamp timestamp);
+
         // Load all audio chunks.
         void loadAudio(std::vector<AudioChunk>& outAudioChunks);
         
         // Load audio in chunks
         AudioChunkLoader& loadAudio() const;
-        
+
     private:
         void init();
         void read(void* data, size_t size, size_t items=1) const;
@@ -81,12 +89,12 @@ namespace motioncam {
         void uncompress(const std::vector<uint8_t>& src, std::vector<uint8_t>& dst);
         
     private:
-        FILE* mFile;
+        unique_file mFile;
         std::vector<BufferOffset> mOffsets;
         std::vector<BufferOffset> mAudioOffsets;
         std::map<Timestamp, BufferOffset> mFrameOffsetMap;
         std::vector<Timestamp> mFrameList;
-        nlohmann::json mMetadata;
+        std::string mMetadata;
         std::vector<uint8_t> mTmpBuffer;
         std::unique_ptr<AudioChunkLoader> mAudioLoader;
     };
