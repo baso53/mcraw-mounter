@@ -40,5 +40,8 @@ final class MyFSItem: FSItem {
         attributes.modifyTime = timespec
         attributes.accessTime = timespec
         attributes.type = .file
+        
+        attributes.parentID = .rootDirectory
+        attributes.linkCount = 0
     }
 }

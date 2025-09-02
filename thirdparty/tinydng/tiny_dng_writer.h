@@ -311,7 +311,7 @@ class DNGImage {
   bool SetCameraCalibration2(const unsigned int plane_count, const float *matrix_values);
 
   /// Specify CFA geometric pattern (left-to-right, top-to-bottom).
-  bool SetCFAPattern(const unsigned int num_components, const unsigned char *values);
+  bool SetCFAPattern(const unsigned int num_components, std::vector<uint8_t> values);
   bool SetCFALayout(const unsigned short value);
   
   /// Specify the selected white balance at time of capture, encoded as the coordinates of a perfectly neutral color in linear reference space values.

@@ -23,7 +23,7 @@ final class MyFSVolume: FSVolume {
             let firstFrameMetadataJson = String(root.decoder.loadFrameMetadata(frameTimestamps.first!))
             let firstFrameMetadata = try JSONDecoder().decode(FrameMetadata.self, from: firstFrameMetadataJson.data(using: .utf8)!)
 
-            root.frameFileSize = UInt64(MyFSVolume.getData(
+            let frameFileSize = UInt64(MyFSVolume.getData(
                 timestamp: frameTimestamps.first!,
                 frameMetadata: firstFrameMetadata,
                 containerMetadata: root.containerMetadata,
@@ -39,7 +39,7 @@ final class MyFSVolume: FSVolume {
                 let nameString = "frame_\(index).dng"
                 let fileName = FSFileName(string: nameString)
                 
-                let frameItem = MyFSItem(name: fileName, timestamp: timestamp, metadata: frameMetadata, size: root.frameFileSize)
+                let frameItem = MyFSItem(name: fileName, timestamp: timestamp, metadata: frameMetadata, size: frameFileSize)
                 root.addItem(frameItem)
             }
         
@@ -63,10 +63,7 @@ final class MyFSVolume: FSVolume {
         if let cached = rootItem.frameCache[timestamp] {
           return cached
         }
-
-        var outData = motioncam.FrameOutData()
-        
-        rootItem.decoder.loadFrame(timestamp, &outData, frameMetadata.width, frameMetadata.height, frameMetadata.compressionType)
+        let outData = rootItem.decoder.loadFrame(timestamp, frameMetadata.width, frameMetadata.height, frameMetadata.compressionType)
         
         var dng = TinyDngModule.tinydngwriter.DNGImage()
         dng.SetBigEndian(false);
@@ -105,7 +102,7 @@ final class MyFSVolume: FSVolume {
             cfa = MotionCamModule.motioncam.CFA(arrayLiteral: 1, 2, 0, 1);
         }
         
-        dng.SetCFAPattern(4, &cfa);
+        dng.SetCFAPattern(4, cfa);
         
         // Rectangular
         dng.SetCFALayout(1);
@@ -137,7 +134,7 @@ final class MyFSVolume: FSVolume {
         writer.AddImage(&dng)
         
         let str = writer.WriteToFile(&err, &count)
-
+        
         let data = Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: str!), count: Int(count), deallocator: .free)
 
         // 3) Insert into cache, popping oldest if needed
@@ -249,12 +246,97 @@ extension MyFSVolume: FSVolume.Operations {
         }
     }
     
-    func setAttributes(
-        _ newAttributes: FSItem.SetAttributesRequest,
-        on item: FSItem
-    ) async throws -> FSItem.Attributes {
-        throw fs_errorForPOSIXError(POSIXError.EIO.rawValue)
+    private func mergeAttributes(_ existing: FSItem.Attributes, request: FSItem.SetAttributesRequest) {
+        if request.isValid(FSItem.Attribute.uid) {
+            existing.uid = request.uid
+        }
+        
+        if request.isValid(FSItem.Attribute.gid) {
+            existing.gid = request.gid
+        }
+        
+        if request.isValid(FSItem.Attribute.type) {
+            existing.type = request.type
+        }
+        
+        if request.isValid(FSItem.Attribute.mode) {
+            existing.mode = request.mode
+        }
+        
+        if request.isValid(FSItem.Attribute.linkCount) {
+            existing.linkCount = request.linkCount
+        }
+        
+        if request.isValid(FSItem.Attribute.flags) {
+            existing.flags = request.flags
+        }
+        
+        if request.isValid(FSItem.Attribute.size) {
+            existing.size = request.size
+        }
+        
+        if request.isValid(FSItem.Attribute.allocSize) {
+            existing.allocSize = request.allocSize
+        }
+        
+        if request.isValid(FSItem.Attribute.fileID) {
+            existing.fileID = request.fileID
+        }
+
+        if request.isValid(FSItem.Attribute.parentID) {
+            existing.parentID = request.parentID
+        }
+
+        if request.isValid(FSItem.Attribute.accessTime) {
+            let timespec = timespec()
+            request.accessTime = timespec
+            existing.accessTime = timespec
+        }
+        
+        if request.isValid(FSItem.Attribute.changeTime) {
+            let timespec = timespec()
+            request.changeTime = timespec
+            existing.changeTime = timespec
+        }
+        
+        if request.isValid(FSItem.Attribute.modifyTime) {
+            let timespec = timespec()
+            request.modifyTime = timespec
+            existing.modifyTime = timespec
+        }
+        
+        if request.isValid(FSItem.Attribute.addedTime) {
+            let timespec = timespec()
+            request.addedTime = timespec
+            existing.addedTime = timespec
+        }
+        
+        if request.isValid(FSItem.Attribute.birthTime) {
+            let timespec = timespec()
+            request.birthTime = timespec
+            existing.birthTime = timespec
+        }
+        
+        if request.isValid(FSItem.Attribute.backupTime) {
+            let timespec = timespec()
+            request.backupTime = timespec
+            existing.backupTime = timespec
+        }
     }
+   
+   func setAttributes(
+       _ newAttributes: FSItem.SetAttributesRequest,
+       on item: FSItem
+   ) async throws -> FSItem.Attributes {
+//        logger.debug("setItemAttributes: \(item), \(newAttributes)")
+       if let item = item as? MyFSItem {
+           mergeAttributes(item.attributes, request: newAttributes)
+           return item.attributes
+       } else {
+           throw fs_errorForPOSIXError(POSIXError.EIO.rawValue)
+       }
+   }
+   
     
     func lookupItem(
         named name: FSFileName,

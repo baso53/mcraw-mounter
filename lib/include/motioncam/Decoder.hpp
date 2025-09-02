@@ -69,7 +69,7 @@ namespace motioncam {
         const std::vector<Timestamp> getFrames() const;
         
         // Load a single frame and its metadata.
-        void loadFrame(const Timestamp timestamp, std::vector<uint8_t>& outData, int width, int height, int compressionType);
+        std::vector<uint8_t> loadFrame(const Timestamp timestamp, int width, int height, int compressionType);
         
         // Load a single frame and its metadata.
         const std::string loadFrameMetadata(const Timestamp timestamp);
@@ -89,7 +89,7 @@ namespace motioncam {
         void uncompress(const std::vector<uint8_t>& src, std::vector<uint8_t>& dst);
         
     private:
-        unique_file mFile;
+        FILE* mFile;
         std::vector<BufferOffset> mOffsets;
         std::vector<BufferOffset> mAudioOffsets;
         std::map<Timestamp, BufferOffset> mFrameOffsetMap;

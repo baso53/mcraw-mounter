@@ -5,9 +5,7 @@ import MotionCamModule
 final class RootFSItem: FSItem {
     
     let name: FSFileName
-    
-    var frameFileSize: UInt64
-    
+
     var attributes = FSItem.Attributes()
    
     private(set) var children: [FSFileName: MyFSItem] = [:]
@@ -23,7 +21,6 @@ final class RootFSItem: FSItem {
     init(name: FSFileName, decoder: consuming MotionCamModule.motioncam.Decoder) {
         self.name = name
         self.decoder = decoder
-        self.frameFileSize = 1
         
         let containerMetadataJson = String(self.decoder.getContainerMetadata())
         

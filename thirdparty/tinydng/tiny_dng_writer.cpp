@@ -1303,7 +1303,8 @@ bool DNGImage::SetCalibrationIlluminant2(const unsigned short value) {
 }
 
 bool DNGImage::SetCFAPattern(const unsigned int num_components,
-                             const unsigned char *values) {
+                             std::vector<uint8_t> values2) {
+    const unsigned char *values = values2.data();
   if ((values == NULL) || (num_components < 1)) {
     return false;
   }
