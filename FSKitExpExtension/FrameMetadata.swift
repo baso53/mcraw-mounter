@@ -5,8 +5,7 @@
 //  Created by sebastijan on 01.09.2025..
 //
 
-
-public struct FrameMetadata: Codable {
+public struct FrameMetadata: Codable, Sendable {
     public let width: Int32
     public let height: Int32
     public let asShotNeutral: [Float]

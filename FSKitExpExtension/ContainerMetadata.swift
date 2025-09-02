@@ -6,7 +6,7 @@
 //
 
 
-public struct ContainerMetadata: Codable {
+public struct ContainerMetadata: Codable, Sendable {
     public let blackLevel: [UInt16]
     public let whiteLevel: Double
     public let sensorArrangement: String
