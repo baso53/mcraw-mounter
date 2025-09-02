@@ -320,7 +320,7 @@ class DNGImage {
   bool SetAsShotWhiteXY(const float x, const float y);
 
   /// Set image data.
-  bool SetImageData(const std::vector<uint8_t>& imageData, const size_t data_len);
+  bool SetImageData(const std::vector<uint8_t>& imageData);
 
   /// Set custom field.
   bool SetCustomFieldLong(const unsigned short tag, const int value);

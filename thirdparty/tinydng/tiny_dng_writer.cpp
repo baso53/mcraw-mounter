@@ -1402,8 +1402,9 @@ bool DNGImage::SetAsShotWhiteXY(const float x, const float y) {
   return true;
 }
 
-bool DNGImage::SetImageData(const std::vector<uint8_t>& imageData, const size_t data_len) {
+bool DNGImage::SetImageData(const std::vector<uint8_t>& imageData) {
   const unsigned char *data = reinterpret_cast<const unsigned char*>(imageData.data());
+  const size_t data_len = imageData.size();
     
   if ((data == NULL) || (data_len < 1)) {
     return false;

@@ -59,23 +59,20 @@ final class MyFSVolume: FSVolume {
         containerMetadata: ContainerMetadata,
         rootItem: RootFSItem
     ) -> Data {
-        rootItem.cacheLock.lock()
-        defer {
-            rootItem.cacheLock.unlock()
-        }
+//        rootItem.cacheLock.lock()
+//        defer {
+//            rootItem.cacheLock.unlock()
+//        }
         // 1) Check cache
         if let cached = rootItem.frameCache[timestamp] {
           return cached
         }
-        let outData = rootItem.decoder.loadFrame(timestamp, frameMetadata.width, frameMetadata.height, frameMetadata.compressionType)
-        
+
         var dng = TinyDngModule.tinydngwriter.DNGImage()
         dng.SetBigEndian(false);
         dng.SetDNGVersion(1, 4, 0, 0);
         dng.SetDNGBackwardVersion(1, 1, 0, 0);
-        dng.SetImageData(
-            outData,
-            outData.size());
+        dng.SetImageData(rootItem.decoder.loadFrame(timestamp, frameMetadata.width, frameMetadata.height, frameMetadata.compressionType));
         dng.SetImageWidth(UInt32(frameMetadata.width));
         dng.SetImageLength(UInt32(frameMetadata.height));
         dng.SetPlanarConfig(UInt16(tinydngwriter.PLANARCONFIG_CONTIG));
