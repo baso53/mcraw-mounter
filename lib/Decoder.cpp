@@ -219,13 +219,6 @@ namespace motioncam {
         mTmpBuffer.resize(bufferItem.size);
 
         read(mTmpBuffer.data(), bufferItem.size);
-                
-        // Get metadata
-        Item metadataItem{};
-        read(&metadataItem, sizeof(Item));
-        
-        if(metadataItem.type != Type::METADATA)
-            throw IOException("Invalid metadata");
 
         // Decompress the buffer
         const size_t outputSizeBytes = sizeof(uint16_t) * width*height;

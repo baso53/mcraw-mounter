@@ -37,8 +37,7 @@ namespace motioncam {
     typedef std::pair<Timestamp, std::vector<int16_t>> AudioChunk;
     typedef std::ostringstream OssStream;
     typedef std::vector<uint8_t> CFA;
-    typedef uint16_t BPS[1];
-    typedef uint32_t ActiveArea[4];
+    typedef std::vector<uint32_t> ActiveArea;
     typedef unsigned long Count;
 
     class MotionCamException : public std::runtime_error {

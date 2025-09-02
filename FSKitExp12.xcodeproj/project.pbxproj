@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		CC32833E2D99D02200EFFA01 /* FSKitExpExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = FSKitExpExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC32833E2D99D02200EFFA01 /* FSKitExp12Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = FSKitExp12Extension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -18,21 +18,21 @@
 				RawData_Legacy.cpp,
 				RawData.cpp,
 			);
-			target = CC32833D2D99D02200EFFA01 /* FSKitExpExtension */;
+			target = CC32833D2D99D02200EFFA01 /* FSKitExp12Extension */;
 		};
 		CC3283492D99D02200EFFA01 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = CC32833D2D99D02200EFFA01 /* FSKitExpExtension */;
+			target = CC32833D2D99D02200EFFA01 /* FSKitExp12Extension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		7A505F092E663BB6005D5D6F /* lib */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (7A5060F52E663BB7005D5D6F /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = lib; sourceTree = "<group>"; };
 		7A5060F02E663BB6005D5D6F /* thirdparty */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = thirdparty; sourceTree = "<group>"; };
-		CC32833F2D99D02200EFFA01 /* FSKitExpExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (CC3283492D99D02200EFFA01 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = FSKitExpExtension; sourceTree = "<group>"; };
+		CC32833F2D99D02200EFFA01 /* FSKitExp12Extension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (CC3283492D99D02200EFFA01 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = FSKitExp12Extension; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -49,7 +49,7 @@
 		CCF967E32C1C110D00FBE72D = {
 			isa = PBXGroup;
 			children = (
-				CC32833F2D99D02200EFFA01 /* FSKitExpExtension */,
+				CC32833F2D99D02200EFFA01 /* FSKitExp12Extension */,
 				CCF967ED2C1C110D00FBE72D /* Products */,
 				7A505F092E663BB6005D5D6F /* lib */,
 				7A5060F02E663BB6005D5D6F /* thirdparty */,
@@ -59,7 +59,7 @@
 		CCF967ED2C1C110D00FBE72D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				CC32833E2D99D02200EFFA01 /* FSKitExpExtension.appex */,
+				CC32833E2D99D02200EFFA01 /* FSKitExp12Extension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -67,9 +67,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		CC32833D2D99D02200EFFA01 /* FSKitExpExtension */ = {
+		CC32833D2D99D02200EFFA01 /* FSKitExp12Extension */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = CC32834A2D99D02200EFFA01 /* Build configuration list for PBXNativeTarget "FSKitExpExtension" */;
+			buildConfigurationList = CC32834A2D99D02200EFFA01 /* Build configuration list for PBXNativeTarget "FSKitExp12Extension" */;
 			buildPhases = (
 				CC32833A2D99D02200EFFA01 /* Sources */,
 				CC32833B2D99D02200EFFA01 /* Frameworks */,
@@ -81,13 +81,13 @@
 			);
 			fileSystemSynchronizedGroups = (
 				7A5060F02E663BB6005D5D6F /* thirdparty */,
-				CC32833F2D99D02200EFFA01 /* FSKitExpExtension */,
+				CC32833F2D99D02200EFFA01 /* FSKitExp12Extension */,
 			);
-			name = FSKitExpExtension;
+			name = FSKitExp12Extension;
 			packageProductDependencies = (
 			);
-			productName = FSKitExpExtension;
-			productReference = CC32833E2D99D02200EFFA01 /* FSKitExpExtension.appex */;
+			productName = FSKitExp12Extension;
+			productReference = CC32833E2D99D02200EFFA01 /* FSKitExp12Extension.appex */;
 			productType = "com.apple.product-type.extensionkit-extension";
 		};
 /* End PBXNativeTarget section */
@@ -106,7 +106,7 @@
 					};
 				};
 			};
-			buildConfigurationList = CCF967E72C1C110D00FBE72D /* Build configuration list for PBXProject "FSKitExp" */;
+			buildConfigurationList = CCF967E72C1C110D00FBE72D /* Build configuration list for PBXProject "FSKitExp12" */;
 			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -119,7 +119,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				CC32833D2D99D02200EFFA01 /* FSKitExpExtension */,
+				CC32833D2D99D02200EFFA01 /* FSKitExp12Extension */,
 			);
 		};
 /* End PBXProject section */
@@ -149,7 +149,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = FSKitExpExtension/FSKitExpExtension.entitlements;
+				CODE_SIGN_ENTITLEMENTS = FSKitExp12Extension/FSKitExp12Extension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
@@ -162,23 +162,23 @@
 					"${PROJECT_DIR}/lib/include",
 					"${PROJECT_DIR}/thirdparty/**",
 				);
-				INFOPLIST_FILE = FSKitExpExtension/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = FSKitExpExtension;
+				INFOPLIST_FILE = FSKitExp12Extension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FSKitExp12Extension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = comsysto.fskit100;
+				PRODUCT_BUNDLE_IDENTIFIER = comsysto.fskit12;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_INCLUDE_PATHS = "${PROJECT_DIR}/lib/include ${PROJECT_DIR}/thirdparty/**";
 				SWIFT_OBJC_INTEROP_MODE = objcxx;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
@@ -187,7 +187,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = FSKitExpExtension/FSKitExpExtension.entitlements;
+				CODE_SIGN_ENTITLEMENTS = FSKitExp12Extension/FSKitExp12Extension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
@@ -199,22 +199,23 @@
 					"${PROJECT_DIR}/lib/include",
 					"${PROJECT_DIR}/thirdparty/**",
 				);
-				INFOPLIST_FILE = FSKitExpExtension/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = FSKitExpExtension;
+				INFOPLIST_FILE = FSKitExp12Extension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FSKitExp12Extension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = comsysto.fskit100;
+				PRODUCT_BUNDLE_IDENTIFIER = comsysto.fskit12;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_INCLUDE_PATHS = "${PROJECT_DIR}/lib/include ${PROJECT_DIR}/thirdparty/**";
 				SWIFT_OBJC_INTEROP_MODE = objcxx;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
@@ -344,7 +345,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		CC32834A2D99D02200EFFA01 /* Build configuration list for PBXNativeTarget "FSKitExpExtension" */ = {
+		CC32834A2D99D02200EFFA01 /* Build configuration list for PBXNativeTarget "FSKitExp12Extension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				CC32834B2D99D02200EFFA01 /* Debug */,
@@ -353,7 +354,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		CCF967E72C1C110D00FBE72D /* Build configuration list for PBXProject "FSKitExp" */ = {
+		CCF967E72C1C110D00FBE72D /* Build configuration list for PBXProject "FSKitExp12" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				CCF9680F2C1C110E00FBE72D /* Debug */,

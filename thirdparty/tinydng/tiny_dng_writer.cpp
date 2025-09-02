@@ -401,10 +401,12 @@ bool DNGImage::SetSamplesPerPixel(const unsigned short value) {
   return true;
 }
 
-bool DNGImage::SetBitsPerSample(const unsigned int num_samples,
-                                const unsigned short *values) {
+bool DNGImage::SetBitsPerSample() {
   // `SetSamplesPerPixel()` must be called in advance and SPP shoud be equal to
   // `num_samples`.
+    const unsigned int num_samples = 1;
+    const short values[1] = {16};
+    
 
   if (samples_per_pixels_ == 0) {
     err_ += "SetSamplesPerPixel() must be called before SetBitsPerSample().\n";
@@ -962,10 +964,10 @@ bool DNGImage::SetSoftware(const std::string &ascii) {
 }
 
 
-bool DNGImage::SetActiveArea(const unsigned int values[4]) {
+bool DNGImage::SetActiveArea(std::vector<uint32_t> values) {
   unsigned int count = 4;
+  const unsigned int *data = values.data();
 
-  const unsigned int *data = values;
   bool ret = WriteTIFFTag(
       static_cast<unsigned short>(TIFFTAG_ACTIVE_AREA), TIFF_LONG, count,
       reinterpret_cast<const unsigned char *>(data), &ifd_tags_, &data_os_);

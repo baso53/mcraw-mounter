@@ -25,7 +25,7 @@
 		<dict/>
 		<key>FSPersonalities</key>
 		<dict>
-			<key>FSKitExpExtensionPersonality</key>
+			<key>FSKitExp12ExtensionPersonality</key>
 			<dict>
 				<key>FSName</key>
 				<string>MyFS3</string>
@@ -36,13 +36,13 @@
 		<key>FSRequiresSecurityScopedPathURLResources</key>
 		<false/>
 		<key>FSShortName</key>
-		<string>MyFS3</string>
+		<string>MyFS12</string>
 		<key>FSSupportsBlockResources</key>
-		<false/>
+		<true/>
 		<key>FSSupportsGenericURLResources</key>
 		<false/>
 		<key>FSSupportsPathURLs</key>
-		<true/>
+		<false/>
 		<key>FSSupportsServerURLs</key>
 		<false/>
 	</dict>

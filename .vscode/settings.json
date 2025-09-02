@@ -50,6 +50,12 @@
         "execution": "cpp",
         "optional": "cpp",
         "queue": "cpp",
-        "stack": "cpp"
+        "stack": "cpp",
+        "charconv": "cpp",
+        "complex": "cpp",
+        "memory": "cpp",
+        "ratio": "cpp",
+        "span": "cpp",
+        "algorithm": "cpp"
     }
 }

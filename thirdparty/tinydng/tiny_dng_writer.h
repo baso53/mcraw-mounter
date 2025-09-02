@@ -233,8 +233,7 @@ class DNGImage {
   bool SetRowsPerStrip(unsigned int value);
   bool SetSamplesPerPixel(unsigned short value);
   // Set bits for each samples
-  bool SetBitsPerSample(const unsigned int num_samples,
-                        const unsigned short *values);
+  bool SetBitsPerSample();
   bool SetPhotometric(unsigned short value);
   bool SetPlanarConfig(unsigned short value);
   bool SetOrientation(unsigned short value);
@@ -268,7 +267,7 @@ class DNGImage {
   ///
   bool SetSoftware(const std::string &ascii);
 
-  bool SetActiveArea(const unsigned int values[4]);
+  bool SetActiveArea(std::vector<uint32_t> values);
 
   bool SetChromaBlurRadius(float value);
 

@@ -1,6 +1,6 @@
 //
 //  MyFS.swift
-//  FSKitExp
+//  FSKitExp12
 //
 //  Created by Khaos Tian on 3/30/25.
 //
@@ -11,7 +11,7 @@ import os
 
 final class MyFS: FSUnaryFileSystem, FSUnaryFileSystemOperations {
     
-    private let logger = Logger(subsystem: "FSKitExp", category: "MyFS")
+    private let logger = Logger(subsystem: "FSKitExp12", category: "MyFS")
     
     func probeResource(
         resource: FSResource,

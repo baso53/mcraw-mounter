@@ -8,7 +8,7 @@ final class MyFSVolume: FSVolume {
     
     private let resource: FSResource
     
-    private let logger = Logger(subsystem: "FSKitExp", category: "MyFSVolume")
+    private let logger = Logger(subsystem: "FSKitExp12", category: "MyFSVolume")
     
     private let root: RootFSItem
 
@@ -59,6 +59,10 @@ final class MyFSVolume: FSVolume {
         containerMetadata: ContainerMetadata,
         rootItem: RootFSItem
     ) -> Data {
+        rootItem.cacheLock.lock()
+        defer {
+            rootItem.cacheLock.unlock()
+        }
         // 1) Check cache
         if let cached = rootItem.frameCache[timestamp] {
           return cached
@@ -106,9 +110,8 @@ final class MyFSVolume: FSVolume {
         
         // Rectangular
         dng.SetCFALayout(1);
-        
-        var bps = MotionCamModule.motioncam.BPS(16)
-        dng.SetBitsPerSample(1, &bps);
+
+        dng.SetBitsPerSample();
         
         dng.SetColorMatrix1(3, rootItem.containerMetadata.colorMatrix1);
         dng.SetColorMatrix2(3, rootItem.containerMetadata.colorMatrix2);
@@ -124,8 +127,12 @@ final class MyFSVolume: FSVolume {
         dng.SetUniqueCameraModel("MotionCam");
         dng.SetSubfileType();
         
-        var activeArea = MotionCamModule.motioncam.ActiveArea( 0, 0, UInt32(frameMetadata.height), UInt32(frameMetadata.width));
-        dng.SetActiveArea(&activeArea.0);
+        var activeArea = motioncam.ActiveArea()
+        activeArea.push_back(0)
+        activeArea.push_back(0)
+        activeArea.push_back(UInt32(frameMetadata.height))
+        activeArea.push_back(UInt32(frameMetadata.width))
+        dng.SetActiveArea(activeArea)
 
         var err = std.string()
         var count = motioncam.Count()

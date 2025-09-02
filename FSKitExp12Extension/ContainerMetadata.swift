@@ -1,12 +1,12 @@
 //
 //  ContainerMetadata.swift
-//  FSKitExpExtension
+//  FSKitExp12Extension
 //
 //  Created by sebastijan on 01.09.2025..
 //
 
 
-public struct ContainerMetadata: Codable, Sendable {
+public struct ContainerMetadata: Codable {
     public let blackLevel: [UInt16]
     public let whiteLevel: Double
     public let sensorArrangement: String
