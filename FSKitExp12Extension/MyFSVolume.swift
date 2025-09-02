@@ -16,7 +16,13 @@ final class MyFSVolume: FSVolume {
         self.resource = resource
         
         do {
-            root = RootFSItem(name: FSFileName(string: "/"), decoder: MotionCamModule.motioncam.Decoder("/Users/sebastijan/007-VIDEO_24mm-240328_141729.0.mcraw"))
+            guard let resource = resource as? FSPathURLResource else {
+                throw fs_errorForPOSIXError(POSIXError.EIO.rawValue)
+            }
+            
+            let filePath = resource.url.path
+
+            root = RootFSItem(name: FSFileName(string: "/"), decoder: MotionCamModule.motioncam.Decoder(std.string(filePath)))
         
             let frameTimestamps = root.decoder.getFrames()
             
