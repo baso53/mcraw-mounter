@@ -88,7 +88,7 @@ namespace motioncam {
         void uncompress(const std::vector<uint8_t>& src, std::vector<uint8_t>& dst);
         
     private:
-        FILE* mFile;
+        unique_file mFile;
         std::vector<BufferOffset> mOffsets;
         std::vector<BufferOffset> mAudioOffsets;
         std::map<Timestamp, BufferOffset> mFrameOffsetMap;

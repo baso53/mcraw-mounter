@@ -31,7 +31,7 @@ final class MyFSVolume: FSVolume {
             ).count)
             
             // Create a child MyFSItem for each frame timestamp
-            for (index, timestamp) in frameTimestamps.prefix(100).enumerated() {
+            for (index, timestamp) in frameTimestamps.enumerated() {
                 let frameMetadataJson = String(root.decoder.loadFrameMetadata(timestamp))
                 let frameMetadata = try JSONDecoder().decode(FrameMetadata.self, from: frameMetadataJson.data(using: .utf8)!)
 
@@ -59,11 +59,11 @@ final class MyFSVolume: FSVolume {
         containerMetadata: ContainerMetadata,
         rootItem: RootFSItem
     ) -> Data {
-//        rootItem.cacheLock.lock()
-//        defer {
-//            rootItem.cacheLock.unlock()
-//        }
-        // 1) Check cache
+        rootItem.cacheLock.lock()
+        defer {
+            rootItem.cacheLock.unlock()
+        }
+
         if let cached = rootItem.frameCache[timestamp] {
           return cached
         }
@@ -186,8 +186,6 @@ extension MyFSVolume: FSVolume.PathConfOperations {
 extension MyFSVolume: FSVolume.Operations {
     
     var supportedVolumeCapabilities: FSVolume.SupportedCapabilities {
-//        logger.debug("supportedVolumeCapabilities")
-        
         let capabilities = FSVolume.SupportedCapabilities()
         capabilities.supportsHardLinks = false
         capabilities.supportsSymbolicLinks = false
@@ -200,8 +198,6 @@ extension MyFSVolume: FSVolume.Operations {
     }
     
     var volumeStatistics: FSStatFSResult {
-//        logger.debug("volumeStatistics")
-        
         let result = FSStatFSResult(fileSystemTypeName: "MyFS")
         
         result.blockSize = 1024000
@@ -217,24 +213,19 @@ extension MyFSVolume: FSVolume.Operations {
     
     
     func activate(options: FSTaskOptions) async throws -> FSItem {
-//        logger.debug("activate")
         return root
     }
     
     func deactivate(options: FSDeactivateOptions = []) async throws {
-//        logger.debug("deactivate")
     }
     
     func mount(options: FSTaskOptions) async throws {
-//        logger.debug("mount")
     }
     
     func unmount() async {
-//        logger.debug("unmount")
     }
     
     func synchronize(flags: FSSyncFlags) async throws {
-//        logger.debug("synchronize")
     }
     
     func attributes(
@@ -242,92 +233,11 @@ extension MyFSVolume: FSVolume.Operations {
         of item: FSItem
     ) async throws -> FSItem.Attributes {
         if let item = item as? MyFSItem {
-//            logger.debug("getItemAttributes for MyFSItem: \(item.name), \(desiredAttributes)")
             return item.attributes
         } else if let item = item as? RootFSItem {
-//            logger.debug("getItemAttributes for RootFSItem: \(item.name), \(desiredAttributes)")
             return item.attributes
         } else {
-//            logger.debug("getItemAttributes error: \(item), \(desiredAttributes)")
             throw fs_errorForPOSIXError(POSIXError.EIO.rawValue)
-        }
-    }
-    
-    private func mergeAttributes(_ existing: FSItem.Attributes, request: FSItem.SetAttributesRequest) {
-        if request.isValid(FSItem.Attribute.uid) {
-            existing.uid = request.uid
-        }
-        
-        if request.isValid(FSItem.Attribute.gid) {
-            existing.gid = request.gid
-        }
-        
-        if request.isValid(FSItem.Attribute.type) {
-            existing.type = request.type
-        }
-        
-        if request.isValid(FSItem.Attribute.mode) {
-            existing.mode = request.mode
-        }
-        
-        if request.isValid(FSItem.Attribute.linkCount) {
-            existing.linkCount = request.linkCount
-        }
-        
-        if request.isValid(FSItem.Attribute.flags) {
-            existing.flags = request.flags
-        }
-        
-        if request.isValid(FSItem.Attribute.size) {
-            existing.size = request.size
-        }
-        
-        if request.isValid(FSItem.Attribute.allocSize) {
-            existing.allocSize = request.allocSize
-        }
-        
-        if request.isValid(FSItem.Attribute.fileID) {
-            existing.fileID = request.fileID
-        }
-
-        if request.isValid(FSItem.Attribute.parentID) {
-            existing.parentID = request.parentID
-        }
-
-        if request.isValid(FSItem.Attribute.accessTime) {
-            let timespec = timespec()
-            request.accessTime = timespec
-            existing.accessTime = timespec
-        }
-        
-        if request.isValid(FSItem.Attribute.changeTime) {
-            let timespec = timespec()
-            request.changeTime = timespec
-            existing.changeTime = timespec
-        }
-        
-        if request.isValid(FSItem.Attribute.modifyTime) {
-            let timespec = timespec()
-            request.modifyTime = timespec
-            existing.modifyTime = timespec
-        }
-        
-        if request.isValid(FSItem.Attribute.addedTime) {
-            let timespec = timespec()
-            request.addedTime = timespec
-            existing.addedTime = timespec
-        }
-        
-        if request.isValid(FSItem.Attribute.birthTime) {
-            let timespec = timespec()
-            request.birthTime = timespec
-            existing.birthTime = timespec
-        }
-        
-        if request.isValid(FSItem.Attribute.backupTime) {
-            let timespec = timespec()
-            request.backupTime = timespec
-            existing.backupTime = timespec
         }
     }
    
@@ -335,9 +245,7 @@ extension MyFSVolume: FSVolume.Operations {
        _ newAttributes: FSItem.SetAttributesRequest,
        on item: FSItem
    ) async throws -> FSItem.Attributes {
-//        logger.debug("setItemAttributes: \(item), \(newAttributes)")
        if let item = item as? MyFSItem {
-           mergeAttributes(item.attributes, request: newAttributes)
            return item.attributes
        } else {
            throw fs_errorForPOSIXError(POSIXError.EIO.rawValue)
@@ -348,8 +256,6 @@ extension MyFSVolume: FSVolume.Operations {
         named name: FSFileName,
         inDirectory directory: FSItem
     ) async throws -> (FSItem, FSFileName) {
-//        logger.debug("lookupName: \(String(describing: name.string)), \(directory)")
-        
         guard let directory = directory as? RootFSItem else {
             throw fs_errorForPOSIXError(POSIXError.ENOENT.rawValue)
         }
@@ -425,28 +331,20 @@ extension MyFSVolume: FSVolume.Operations {
         attributes: FSItem.GetAttributesRequest?,
         packer: FSDirectoryEntryPacker
     ) async throws -> FSDirectoryVerifier {
-//        logger.debug("enumerateDirectory: \(directory)")
-        
         guard let directory = directory as? RootFSItem else {
             throw fs_errorForPOSIXError(POSIXError.ENOENT.rawValue)
         }
-        
-//        logger.debug("- enumerateDirectory - \(directory.name)")
-        
+
         for (idx, item) in directory.children.values.enumerated() {
-            let isLast = (idx == directory.children.count - 1)
-            
-            let v = packer.packEntry(
+            packer.packEntry(
                 name: item.name,
                 itemType: item.attributes.type,
                 itemID: item.attributes.fileID,
                 nextCookie: FSDirectoryCookie(UInt64(idx)),
                 attributes: attributes != nil ? item.attributes : nil
             )
-            
-//            logger.debug("-- V: \(v) - \(item.name)")
         }
-        
+
         return FSDirectoryVerifier(0)
     }
 }
@@ -459,8 +357,6 @@ extension MyFSVolume: FSVolume.ReadWriteOperations {
         length: Int,
         into buffer: FSMutableFileDataBuffer
     ) async throws -> Int {
-//        logger.debug("read: \(item)")
-        
         var bytesRead = 0
         
         if let item = item as? MyFSItem
@@ -472,7 +368,6 @@ extension MyFSVolume: FSVolume.ReadWriteOperations {
               rootItem: root
             )
             
-            // Make sure offset is in range
             let totalSize = item.attributes.size
             guard offset < totalSize else {
                 // nothing to read beyond EOF
