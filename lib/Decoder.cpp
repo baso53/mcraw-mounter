@@ -199,9 +199,7 @@ namespace motioncam {
         return std::string(metadataJson.begin(), metadataJson.end());
     }
 
-    std::vector<uint8_t> Decoder::loadFrame(const Timestamp timestamp, int width, int height, int compressionType) {
-        std::vector<uint8_t> outData;
-
+    void Decoder::loadFrame(const Timestamp timestamp, std::vector<uint8_t>& outData, int width, int height, int compressionType) {
         if(mFrameOffsetMap.find(timestamp) == mFrameOffsetMap.end())
             throw IOException("Frame not found (timestamp: " + std::to_string(timestamp) + ")");
         
@@ -235,8 +233,6 @@ namespace motioncam {
         else {
             throw IOException("Invalid compression type");
         }
-        
-        return outData;
     }
 
     void Decoder::readIndex() {

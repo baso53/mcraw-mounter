@@ -67,12 +67,15 @@ final class MyFSVolume: FSVolume {
         if let cached = rootItem.frameCache[timestamp] {
           return cached
         }
+        
+        var outData = MotionCamModule.motioncam.FrameOutData()
+        rootItem.decoder.loadFrame(timestamp, &outData, frameMetadata.width, frameMetadata.height, frameMetadata.compressionType)
 
         var dng = TinyDngModule.tinydngwriter.DNGImage()
         dng.SetBigEndian(false);
         dng.SetDNGVersion(1, 4, 0, 0);
         dng.SetDNGBackwardVersion(1, 1, 0, 0);
-        dng.SetImageData(rootItem.decoder.loadFrame(timestamp, frameMetadata.width, frameMetadata.height, frameMetadata.compressionType));
+        dng.SetImageData(outData);
         dng.SetImageWidth(UInt32(frameMetadata.width));
         dng.SetImageLength(UInt32(frameMetadata.height));
         dng.SetPlanarConfig(UInt16(tinydngwriter.PLANARCONFIG_CONTIG));
@@ -340,8 +343,7 @@ extension MyFSVolume: FSVolume.Operations {
            throw fs_errorForPOSIXError(POSIXError.EIO.rawValue)
        }
    }
-   
-    
+
     func lookupItem(
         named name: FSFileName,
         inDirectory directory: FSItem
