@@ -320,7 +320,7 @@ class DNGImage {
   bool SetAsShotWhiteXY(const float x, const float y);
 
   /// Set image data.
-  bool SetImageData(const std::vector<uint8_t>& imageData);
+  bool SetImageData(const std::vector<uint8_t> *imageData);
 
   /// Set custom field.
   bool SetCustomFieldLong(const unsigned short tag, const int value);
@@ -368,29 +368,17 @@ class DNGWriter {
  public:
   // TODO(syoyo): Use same endian setting with DNGImage.
   DNGWriter(bool big_endian);
-  ~DNGWriter() {}
 
-  ///
-  /// Add DNGImage.
-  /// It just retains the pointer of the image, thus
-  /// application must not free resources until `WriteToFile` has been called.
-  ///
-  bool AddImage(const DNGImage *image) {
-    images_.push_back(image);
+    /// Write DNG to a file.
+    /// Return error string to `err` when Write() returns false.
+    /// Returns true upon success.
+    const char* WriteToFile(DNGImage *image,
+                                       std::string  *err,
+                            unsigned long *count) const SWIFT_RETURNS_INDEPENDENT_VALUE;
 
-    return true;
-  }
-
-  /// Write DNG to a file.
-  /// Return error string to `err` when Write() returns false.
-  /// Returns true upon success.
-  const char* WriteToFile(std::string *err, unsigned long *count) const SWIFT_RETURNS_INDEPENDENT_VALUE;
-  
  private:
   bool swap_endian_;
   bool dng_big_endian_;  // Endianness of DNG file.
-
-  std::vector<const DNGImage *> images_;
 };
 
 }  // namespace tinydngwriter

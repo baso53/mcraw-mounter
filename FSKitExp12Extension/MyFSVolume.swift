@@ -12,17 +12,13 @@ final class MyFSVolume: FSVolume {
     
     private let root: RootFSItem
 
+    private let writer = tinydngwriter.DNGWriter(false)
+
     init(resource: FSResource) {
         self.resource = resource
         
         do {
-            guard let resource = resource as? FSPathURLResource else {
-                throw fs_errorForPOSIXError(POSIXError.EIO.rawValue)
-            }
-            
-            let filePath = resource.url.path
-
-            root = RootFSItem(name: FSFileName(string: "/"), decoder: MotionCamModule.motioncam.Decoder(std.string(filePath)))
+            root = RootFSItem(name: FSFileName(string: "/"), decoder: MotionCamModule.motioncam.Decoder(std.string("/Users/sebastijan/007-VIDEO_24mm-240328_141729.0.mcraw")))
         
             let frameTimestamps = root.decoder.getFrames()
             
@@ -33,6 +29,7 @@ final class MyFSVolume: FSVolume {
                 timestamp: frameTimestamps.first!,
                 frameMetadata: firstFrameMetadata,
                 containerMetadata: root.containerMetadata,
+                writer: writer,
                 rootItem: root
             ).count)
             
@@ -63,16 +60,17 @@ final class MyFSVolume: FSVolume {
         timestamp: MotionCamModule.motioncam.Timestamp,
         frameMetadata: FrameMetadata,
         containerMetadata: ContainerMetadata,
+        writer: borrowing tinydngwriter.DNGWriter,
         rootItem: RootFSItem
     ) -> Data {
         rootItem.cacheLock.lock()
-        defer {
-            rootItem.cacheLock.unlock()
+        for (idx, item) in rootItem.frameCacheOrder.enumerated() {
+            if timestamp == item {
+                rootItem.cacheLock.unlock()
+                return rootItem.frameCache[idx]
+            }
         }
-
-        if let cached = rootItem.frameCache[timestamp] {
-          return cached
-        }
+        rootItem.cacheLock.unlock()
         
         var outData = MotionCamModule.motioncam.FrameOutData()
         rootItem.decoder.loadFrame(timestamp, &outData, frameMetadata.width, frameMetadata.height, frameMetadata.compressionType)
@@ -81,7 +79,7 @@ final class MyFSVolume: FSVolume {
         dng.SetBigEndian(false);
         dng.SetDNGVersion(1, 4, 0, 0);
         dng.SetDNGBackwardVersion(1, 1, 0, 0);
-        dng.SetImageData(outData);
+        dng.SetImageData(&outData);
         dng.SetImageWidth(UInt32(frameMetadata.width));
         dng.SetImageLength(UInt32(frameMetadata.height));
         dng.SetPlanarConfig(UInt16(tinydngwriter.PLANARCONFIG_CONTIG));
@@ -142,21 +140,20 @@ final class MyFSVolume: FSVolume {
 
         var err = std.string()
         var count = motioncam.Count()
-        
-        var writer = tinydngwriter.DNGWriter(false)
-        writer.AddImage(&dng)
-        
-        let str = writer.WriteToFile(&err, &count)
+
+        let str = writer.WriteToFile(&dng, &err, &count)
         
         let data = Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: str!), count: Int(count), deallocator: .free)
 
+        rootItem.cacheLock.lock()
         // 3) Insert into cache, popping oldest if needed
         if rootItem.frameCache.count >= rootItem.maxCacheFrames {
             let oldestKey = rootItem.frameCacheOrder.removeFirst()
-            rootItem.frameCache[oldestKey] = nil
+            rootItem.frameCache.removeFirst()
         }
-        rootItem.frameCache[timestamp] = data
+        rootItem.frameCache.append(data)
         rootItem.frameCacheOrder.append(timestamp)
+        rootItem.cacheLock.unlock()
 
         return data
     }
@@ -371,6 +368,7 @@ extension MyFSVolume: FSVolume.ReadWriteOperations {
               timestamp: item.timestamp,
               frameMetadata: item.metadata,
               containerMetadata: root.containerMetadata,
+              writer: writer,
               rootItem: root
             )
             
@@ -381,13 +379,13 @@ extension MyFSVolume: FSVolume.ReadWriteOperations {
             }
             
             // Compute how many bytes we can actually read
-            let maxRead = min(length, Int(totalSize) - Int(offset))
+            let intOffset = Int(offset)
+            let maxRead = min(length, Int(totalSize) - intOffset)
             
             // Copy bytes from `data` into your buffer
             bytesRead = dng.withUnsafeBytes { (src: UnsafeRawBufferPointer) in
                 buffer.withUnsafeMutableBytes { (dst: UnsafeMutableRawBufferPointer) in
-                    let asdasd = UnsafeRawPointer(src.baseAddress!)
-                    let srcPtr = asdasd.advanced(by: Int(offset))
+                    let srcPtr = src.baseAddress! + intOffset
                     let dstPtr = dst.baseAddress!
                     memcpy(dstPtr, srcPtr, maxRead)
                     return maxRead

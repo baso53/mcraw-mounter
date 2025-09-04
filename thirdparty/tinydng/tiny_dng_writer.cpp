@@ -1402,9 +1402,9 @@ bool DNGImage::SetAsShotWhiteXY(const float x, const float y) {
   return true;
 }
 
-bool DNGImage::SetImageData(const std::vector<uint8_t>& imageData) {
-  const unsigned char *data = reinterpret_cast<const unsigned char*>(imageData.data());
-  const size_t data_len = imageData.size();
+bool DNGImage::SetImageData(const std::vector<uint8_t> *imageData) {
+  const unsigned char *data = reinterpret_cast<const unsigned char*>(imageData->data());
+  const size_t data_len = imageData->size();
     
   if ((data == NULL) || (data_len < 1)) {
     return false;
@@ -1634,105 +1634,61 @@ DNGWriter::DNGWriter(bool big_endian) : dng_big_endian_(big_endian) {
   swap_endian_ = (IsBigEndian() != dng_big_endian_);
 }
 
-const char* DNGWriter::WriteToFile(std::string *err, unsigned long *count) const SWIFT_RETURNS_INDEPENDENT_VALUE {
+const char* DNGWriter::WriteToFile(DNGImage *image,
+                                   std::string  *err,
+                                   unsigned long *count) const SWIFT_RETURNS_INDEPENDENT_VALUE
+{
   std::ostringstream ofs;
   std::ostringstream header;
-  bool ret = WriteTIFFVersionHeader(&header, dng_big_endian_);
-  if (!ret) {
-    if (err) {
-      (*err) = "Failed to write TIFF version header.\n";
-    }
-      return NULL;
+  if (! WriteTIFFVersionHeader(&header, dng_big_endian_)) {
+    if (err) *err = "Failed to write TIFF version header.\n";
+    return nullptr;
   }
 
-  if (images_.size() == 0) {
-    if (err) {
-      (*err) = "No image added for writing.\n";
-    }
-
-      return NULL;
-  }
-
-  // 1. Compute offset and data size(exclude TIFF header bytes)
-  size_t data_len = 0;
-  size_t strip_offset = 0;
-  std::vector<size_t> data_offset_table;
-  std::vector<size_t> strip_offset_table;
-  for (size_t i = 0; i < images_.size(); i++) {
-    strip_offset = data_len + images_[i]->GetStripOffset();
-    data_offset_table.push_back(data_len);
-    strip_offset_table.push_back(strip_offset);
-    data_len += images_[i]->GetDataSize();
-  }
-
-  // 2. Write offset to ifd table.
+  const size_t  data_size    = image->GetDataSize();
+  const size_t  strip_offset = image->GetStripOffset();
   const unsigned int ifd_offset =
-      kHeaderSize + static_cast<unsigned int>(data_len);
+    kHeaderSize + static_cast<unsigned int>(data_size);
+
   Write4(ifd_offset, &header, swap_endian_);
 
-  assert(header.str().length() == 8);
+  assert(header.str().length() == kHeaderSize);
 
-  // std::cout << "ifd_offset " << ifd_offset << std::endl;
-  // std::cout << "data_len " << data_os_.str().length() << std::endl;
-  // std::cout << "ifd_len " << ifd_os_.str().length() << std::endl;
-  // std::cout << "swap endian " << swap_endian_ << std::endl;
-
-  // 3. Write header
   ofs.write(header.str().c_str(),
             static_cast<std::streamsize>(header.str().length()));
 
-  // 4. Write image and meta data
-  // TODO(syoyo): Write IFD first, then image/meta data
-  for (size_t i = 0; i < images_.size(); i++) {
-    bool ok = images_[i]->WriteDataToStream(&ofs);
-    if (!ok) {
-      if (err) {
-        std::stringstream ss;
-        ss << "Failed to write data at image[" << i << "]. err = " << images_[i]->Error() << "\n";
-        (*err) += ss.str();
-      }
-        return NULL;
+  if (! image->WriteDataToStream(&ofs)) {
+    if (err) {
+      *err  = "Failed to write image data: ";
+      *err += image->Error();
     }
+    return nullptr;
   }
 
-  // 5. Write IFD entries;
-  for (size_t i = 0; i < images_.size(); i++) {
-    bool ok = images_[i]->WriteIFDToStream(
-        static_cast<unsigned int>(data_offset_table[i]),
-        static_cast<unsigned int>(strip_offset_table[i]), &ofs);
-    if (!ok) {
-      if (err) {
-        std::stringstream ss;
-        ss << "Failed to write IFD at image[" << i << "]. err = " << images_[i]->Error() << "\n";
-        (*err) += ss.str();
-      }
-        return NULL;
+  const unsigned int data_offset = 0;
+  if (! image->WriteIFDToStream(
+         data_offset,
+         static_cast<unsigned int>(strip_offset),
+         &ofs)) {
+    if (err) {
+      *err  = "Failed to write IFD: ";
+      *err += image->Error();
     }
-
-    unsigned int next_ifd_offset =
-        static_cast<unsigned int>(ofs.tellp()) + sizeof(unsigned int);
-
-    if (i == (images_.size() - 1)) {
-      // Write zero as IFD offset(= end of data)
-      next_ifd_offset = 0;
-    }
-
-    if (swap_endian_) {
-      swap4(&next_ifd_offset);
-    }
-
-    ofs.write(reinterpret_cast<const char *>(&next_ifd_offset), 4);
-      
-    auto str = ofs.str();
-    (*count) = str.length();
-    
-    char* out = static_cast<char*>(std::malloc(str.size()+1));
-    std::memcpy(out, str.c_str(), str.size()+1);
-    
-    return out;
+    return nullptr;
   }
 
-  return NULL;
+  {
+    unsigned int zero = 0;
+    if (swap_endian_) swap4(&zero);
+    ofs.write(reinterpret_cast<const char*>(&zero), 4);
+  }
+
+  const std::string out_str = ofs.str();
+  *count = static_cast<unsigned long>(out_str.size());
+  char *out  = static_cast<char*>(std::malloc(out_str.size() + 1));
+  std::memcpy(out, out_str.c_str(), out_str.size() + 1);
+
+  return out;
 }
 
 #ifdef __clang__

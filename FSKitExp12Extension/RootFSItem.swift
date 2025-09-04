@@ -14,8 +14,8 @@ final class RootFSItem: FSItem {
     
     var decoder: MotionCamModule.motioncam.Decoder
 
-    let maxCacheFrames = 3
-    var frameCache: [MotionCamModule.motioncam.Timestamp: Data] = [:]
+    let maxCacheFrames = 5
+    var frameCache: [Data] = []
     var frameCacheOrder: [MotionCamModule.motioncam.Timestamp] = []
     
     var cacheLock = NSLock()

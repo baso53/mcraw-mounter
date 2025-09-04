@@ -38,11 +38,11 @@
 		<key>FSShortName</key>
 		<string>MyFS12</string>
 		<key>FSSupportsBlockResources</key>
-		<false/>
+		<true/>
 		<key>FSSupportsGenericURLResources</key>
 		<false/>
 		<key>FSSupportsPathURLs</key>
-		<true/>
+		<false/>
 		<key>FSSupportsServerURLs</key>
 		<false/>
 	</dict>
