@@ -18,13 +18,31 @@ final class MyFSVolume: FSVolume {
         self.resource = resource
         
         do {
-            root = RootFSItem(name: FSFileName(string: "/"), decoder: MotionCamModule.motioncam.Decoder(std.string("/Users/sebastijan/007-VIDEO_24mm-240328_141729.0.mcraw")))
-        
+            guard let resource = resource as? FSPathURLResource else {
+                            throw fs_errorForPOSIXError(POSIXError.EIO.rawValue)
+                        }
+
+            let ok = resource.url.startAccessingSecurityScopedResource()
+            guard ok else { exit(EXIT_FAILURE) }
+            
+            
+            // 2. Convert to fileSystemRepresentation (null-terminated C string)
+            let filePath = (resource.url as NSURL).fileSystemRepresentation
+
+            // 3. Open with fopen (for reading, change mode as needed)
+            let filePointer = fopen(filePath, "r")
+            guard filePointer != nil else {
+                resource.url.stopAccessingSecurityScopedResource()
+                exit(EXIT_FAILURE)
+            }
+
+            root = RootFSItem(name: FSFileName(string: "/"), decoder: MotionCamModule.motioncam.Decoder(filePointer))
+            
             let frameTimestamps = root.decoder.getFrames()
             
             let firstFrameMetadataJson = String(root.decoder.loadFrameMetadata(frameTimestamps.first!))
             let firstFrameMetadata = try JSONDecoder().decode(FrameMetadata.self, from: firstFrameMetadataJson.data(using: .utf8)!)
-
+            
             let frameFileSize = UInt64(MyFSVolume.getData(
                 timestamp: frameTimestamps.first!,
                 frameMetadata: firstFrameMetadata,
@@ -37,7 +55,7 @@ final class MyFSVolume: FSVolume {
             for (index, timestamp) in frameTimestamps.enumerated() {
                 let frameMetadataJson = String(root.decoder.loadFrameMetadata(timestamp))
                 let frameMetadata = try JSONDecoder().decode(FrameMetadata.self, from: frameMetadataJson.data(using: .utf8)!)
-
+                
                 // now `data` holds the exact bytes from your CChar buffer
                 let nameString = "frame_\(index).dng"
                 let fileName = FSFileName(string: nameString)
@@ -66,8 +84,9 @@ final class MyFSVolume: FSVolume {
         rootItem.cacheLock.lock()
         for (idx, item) in rootItem.frameCacheOrder.enumerated() {
             if timestamp == item {
+                let data = rootItem.frameCache[idx]
                 rootItem.cacheLock.unlock()
-                return rootItem.frameCache[idx]
+                return data
             }
         }
         rootItem.cacheLock.unlock()
@@ -148,7 +167,7 @@ final class MyFSVolume: FSVolume {
         rootItem.cacheLock.lock()
         // 3) Insert into cache, popping oldest if needed
         if rootItem.frameCache.count >= rootItem.maxCacheFrames {
-            let oldestKey = rootItem.frameCacheOrder.removeFirst()
+            rootItem.frameCacheOrder.removeFirst()
             rootItem.frameCache.removeFirst()
         }
         rootItem.frameCache.append(data)
