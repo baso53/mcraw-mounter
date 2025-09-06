@@ -19,12 +19,13 @@ final class MyFSVolume: FSVolume {
         
         do {
             guard let resource = resource as? FSPathURLResource else {
-                            throw fs_errorForPOSIXError(POSIXError.EIO.rawValue)
-                        }
+                exit(EXIT_FAILURE)
+            }
+            
+            let fileName = resource.url.deletingPathExtension().lastPathComponent
 
             let ok = resource.url.startAccessingSecurityScopedResource()
             guard ok else { exit(EXIT_FAILURE) }
-            
             
             // 2. Convert to fileSystemRepresentation (null-terminated C string)
             let filePath = (resource.url as NSURL).fileSystemRepresentation
@@ -66,7 +67,7 @@ final class MyFSVolume: FSVolume {
         
         super.init(
             volumeID: FSVolume.Identifier(uuid: UUID()),
-            volumeName: FSFileName(string: "Test5")
+            volumeName: FSFileName(string: fileName)
         )
         } catch {
             print("Decoding failed:", error)
@@ -82,14 +83,15 @@ final class MyFSVolume: FSVolume {
         rootItem: RootFSItem
     ) -> Data {
         rootItem.cacheLock.lock()
+        defer {
+            rootItem.cacheLock.unlock()
+        }
         for (idx, item) in rootItem.frameCacheOrder.enumerated() {
             if timestamp == item {
                 let data = rootItem.frameCache[idx]
-                rootItem.cacheLock.unlock()
                 return data
             }
         }
-        rootItem.cacheLock.unlock()
         
         var outData = MotionCamModule.motioncam.FrameOutData()
         rootItem.decoder.loadFrame(timestamp, &outData, frameMetadata.width, frameMetadata.height, frameMetadata.compressionType)
@@ -164,7 +166,6 @@ final class MyFSVolume: FSVolume {
         
         let data = Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: str!), count: Int(count), deallocator: .free)
 
-        rootItem.cacheLock.lock()
         // 3) Insert into cache, popping oldest if needed
         if rootItem.frameCache.count >= rootItem.maxCacheFrames {
             rootItem.frameCacheOrder.removeFirst()
@@ -172,7 +173,6 @@ final class MyFSVolume: FSVolume {
         }
         rootItem.frameCache.append(data)
         rootItem.frameCacheOrder.append(timestamp)
-        rootItem.cacheLock.unlock()
 
         return data
     }

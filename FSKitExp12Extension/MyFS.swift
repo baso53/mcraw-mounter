@@ -17,9 +17,15 @@ final class MyFS: FSUnaryFileSystem, FSUnaryFileSystemOperations {
         resource: FSResource,
         replyHandler: @escaping (FSProbeResult?, (any Error)?) -> Void
     ) {
+        guard let resource = resource as? FSPathURLResource else {
+            exit(EXIT_FAILURE)
+        }
+        
+        let fileName = resource.url.deletingPathExtension().lastPathComponent
+
         replyHandler(
             FSProbeResult.usable(
-                name: "Test5",
+                name: fileName,
                 containerID: FSContainerIdentifier(uuid: UUID())
             ),
             nil
