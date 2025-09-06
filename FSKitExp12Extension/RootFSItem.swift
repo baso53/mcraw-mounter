@@ -18,7 +18,7 @@ final class RootFSItem: FSItem {
     var frameCache: [Data] = []
     var frameCacheOrder: [MotionCamModule.motioncam.Timestamp] = []
     
-    var cacheLock = NSLock()
+    var cacheLock = os_unfair_lock()
     
     init(name: FSFileName, decoder: consuming MotionCamModule.motioncam.Decoder) {
         self.name = name

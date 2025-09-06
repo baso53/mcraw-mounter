@@ -82,9 +82,9 @@ final class MyFSVolume: FSVolume {
         writer: borrowing tinydngwriter.DNGWriter,
         rootItem: RootFSItem
     ) -> Data {
-        rootItem.cacheLock.lock()
+        os_unfair_lock_lock(&rootItem.cacheLock)
         defer {
-            rootItem.cacheLock.unlock()
+            os_unfair_lock_unlock(&rootItem.cacheLock)
         }
         for (idx, item) in rootItem.frameCacheOrder.enumerated() {
             if timestamp == item {
