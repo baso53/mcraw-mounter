@@ -53,7 +53,7 @@ bool getAudio(
 struct FSContext {
     motioncam::Decoder *decoder = nullptr;
     std::map<std::string, motioncam::Timestamp> dngFileNameToFrameTimestamp;
-    std::map<std::string, std::string> dngFileNameToFrameCache;
+    std::map<std::string, std::vector<char>> dngFileNameToFrameCache;
     std::deque<std::string> frameCacheOrder;
     static constexpr size_t MAX_CACHE_FRAMES = 5;
     size_t frameSize = 0;
@@ -192,8 +192,12 @@ static int load_frame(FSContext *ctx, const std::string &path, size_t* size)
     std::string err;
     tinydngwriter::DNGWriter writer(false);
     writer.AddImage(&dng);
-    std::ostringstream oss;
-    if (!writer.WriteToFile(oss, &err))
+    
+    std::vector<char> outputBuffer;
+    boost::vectorbuf outputBufferVectorBuf(outputBuffer);
+    std::ostream outputStream(&outputBufferVectorBuf);
+
+    if (!writer.WriteToFile(outputStream, &err))
     {
         std::cerr << "DNG pack error: " << err << "\n";
         return -EIO;
@@ -205,7 +209,7 @@ static int load_frame(FSContext *ctx, const std::string &path, size_t* size)
         ctx->dngFileNameToFrameCache.erase(ctx->frameCacheOrder.front());
         ctx->frameCacheOrder.pop_front();
     }
-    ctx->dngFileNameToFrameCache[path] = oss.str();
+    ctx->dngFileNameToFrameCache[path] = std::move(outputBuffer);
     ctx->frameCacheOrder.push_back(path);
 
     (*size) = ctx->dngFileNameToFrameCache[path].size();
@@ -369,7 +373,7 @@ static int fs_read(const char *path,
     auto it2 = ctx.dngFileNameToFrameCache.find(fname);
     if (it2 == ctx.dngFileNameToFrameCache.end())
         return -ENOENT;
-    const std::string &data = it2->second;
+    auto &data = it2->second;
     if ((size_t)offset >= data.size())
         return 0;
     size_t tocopy = std::min<size_t>(size, data.size() - (size_t)offset);
