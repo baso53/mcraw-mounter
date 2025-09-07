@@ -1,19 +1,3 @@
-/*
- * Copyright 2023 MotionCam
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 #define FUSE_USE_VERSION 29
 
 #include <fuse.h>
@@ -25,15 +9,10 @@
 #include <sstream>
 #include <iostream>
 #include <cmath>
-#include <unistd.h>
-#include <sys/statvfs.h>
-#include <cstring>    // for strdup, strerror
-#include <libgen.h>   // for dirname(), basename()
-#include <sys/stat.h> // for mkdir
-#include <errno.h>
-#include <dirent.h>   // for scanning directory
-#include <limits.h>   // for PATH_MAX
-#include <mach-o/dyld.h> // For _NSGetExecutablePath
+#include <filesystem>   // C++17 filesystem for cross-platform directory and path handling
+#include <sys/stat.h>   // for mode constants
+#include <cstring>      // for strerror
+#include <cerrno>       // for errno
 
 #include <motioncam/Decoder.hpp>
 #include <audiofile/AudioFile.h>
@@ -131,7 +110,7 @@ static void cache_container_metadata(FSContext *ctx)
 
 static std::string frameName(const std::string &base, int i)
 {
-    char buf[PATH_MAX];
+    char buf[200];
     std::snprintf(buf, sizeof(buf), "%s_%06d.dng", base.c_str(), i);
     return buf;
 }
@@ -288,7 +267,7 @@ static int fs_getattr(const char *path, struct stat *st)
     FSContext &ctx = it->second;
 
     // if they asked for "<base>.wav"
-    std::string audioName = ctx.baseName + ".wav";
+    std::string audioName = "audio.wav";
     if (fname == audioName) {
         if (ctx.audioSize == 0)
             return -ENOENT;
@@ -408,7 +387,7 @@ static int fs_read(const char *path,
             return 0;
         size_t tocopy = std::min<size_t>(size, ctx.audioSize - (size_t)offset);
         memcpy(buf, ctx.audioWavData.data() + offset, tocopy);
-        return (ssize_t)tocopy;
+        return tocopy;
     }
 
     // otherwise decode & serve a frame
@@ -423,14 +402,14 @@ static int fs_read(const char *path,
         return 0;
     size_t tocopy = std::min<size_t>(size, data.size() - (size_t)offset);
     memcpy(buf, data.data() + offset, tocopy);
-    return (ssize_t)tocopy;
+    return tocopy;
 }
 
 static struct fuse_operations fs_ops = {
     .getattr = fs_getattr,
-    .readdir = fs_readdir,
     .open    = fs_open,
     .read    = fs_read,
+    .readdir = fs_readdir,
 };
 
 int main(int argc, char *argv[])
@@ -441,31 +420,22 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // 1) figure out our own executable's directory
-    char exePath[PATH_MAX];
-    uint32_t size = sizeof(exePath);
-    if (_NSGetExecutablePath(exePath, &size) != 0) {
-        fprintf(stderr, "Executable path too long\n");
-        exit(1);
-    }
-    // dirname() may modify its argument
-    std::string appDir = dirname(exePath);
+    namespace fs = std::filesystem;
+
+    // 1) figure out our own executable's directory via argv[0]
+    fs::path exePath = fs::weakly_canonical(argv[0]);
+    std::string appDir = exePath.parent_path().string();
 
     // 2) scan that directory for *.mcraw files
-    DIR *d = opendir(appDir.c_str());
-    if (!d) {
-        std::cerr << "Error: cannot open directory " << appDir << "\n";
-        return 1;
-    }
-
-    struct dirent *ent;
-    while ((ent = readdir(d)) != nullptr) {
-        std::string fn = ent->d_name;
-        // only care about files ending in ".mcraw"
-        if (fn.size() > 6 && fn.compare(fn.size()-6, 6, ".mcraw") == 0) {
-            // build full absolute path
-            std::string fullPath = appDir + "/" + fn;
-            std::string baseName = fn.substr(0, fn.size()-6);
+    try {
+        for (auto const& entry : fs::directory_iterator(appDir)) {
+            if (!entry.is_regular_file())
+                continue;
+            if (entry.path().extension() != ".mcraw")
+                continue;
+            std::string fn = entry.path().filename().string();
+            std::string fullPath = entry.path().string();
+            std::string baseName = entry.path().stem().string();
 
             std::cout << "Found file: " << fullPath << "\n";
 
@@ -510,7 +480,7 @@ int main(int argc, char *argv[])
                 int sampleRate  = ctx.decoder->audioSampleRateHz();
                 int numChannels = ctx.decoder->numAudioChannels();
 
-                auto wavBytes = getAudio(
+                getAudio(
                     fileData,
                     sampleRate,
                     numChannels,
@@ -530,7 +500,10 @@ int main(int argc, char *argv[])
             contexts.emplace(baseName, std::move(ctx));
         }
     }
-    closedir(d);
+    catch (std::exception &e) {
+        std::cerr << "Directory scan error: " << e.what() << "\n";
+        return 1;
+    }
 
     if (contexts.empty()) {
         std::cerr << "No .mcraw files found in " << appDir << "\n";
@@ -539,14 +512,18 @@ int main(int argc, char *argv[])
 
     // 3) ensure the mount‐point exists
     std::string mountPoint = appDir + "/mcraws";
-    if (::mkdir(mountPoint.c_str(), 0755) != 0 && errno != EEXIST) {
+    try {
+        if (!fs::exists(mountPoint))
+            fs::create_directory(mountPoint);
+        }
+        catch (std::exception &e) {
         std::cerr << "Error creating mountpoint '" << mountPoint
-             << "': " << strerror(errno) << "\n";
+        << "': " << e.what() << "\n";
         return 1;
     }
 
-    // 3) assemble the same FUSE flags/options as original
-    std::string volname = mountPoint.substr(mountPoint.find_last_of('/') + 1);
+    // 4) assemble the same FUSE flags/options as original
+    std::string volname = fs::path(mountPoint).filename().string();
     std::string mountOptions =
         "iosize=8388608,"
         "noappledouble,"
@@ -565,13 +542,17 @@ int main(int argc, char *argv[])
     fuse_argv[5] = (char*)mountPoint.c_str();
     fuse_argv[6] = nullptr;
 
-    // 4) run FUSE
+    // 5) run FUSE
     int ret = fuse_main(fuse_argc, fuse_argv, &fs_ops, nullptr);
 
     std::cout << "Exit code: " << ret;
-    if (::rmdir(mountPoint.c_str()) != 0)
-        std::cerr << "cleanup_mount: rmdir(\"" << mountPoint
-              << "\") failed: " << strerror(errno) << "\n";
+    try {
+        if (fs::exists(mountPoint))
+            fs::remove(mountPoint);
+    }
+    catch (...) {
+        std::cerr << "cleanup_mount: cannot remove '" << mountPoint << "'\n";
+    }
 
     return ret;
 }
