@@ -52,12 +52,11 @@ bool getAudio(
 
 struct FSContext {
     motioncam::Decoder *decoder = nullptr;
-    std::vector<std::string> filenames;
-    std::map<std::string, std::string> frameCache;
-    static constexpr size_t MAX_CACHE_FRAMES = 5;
+    std::map<std::string, motioncam::Timestamp> dngFileNameToFrameTimestamp;
+    std::map<std::string, std::string> dngFileNameToFrameCache;
     std::deque<std::string> frameCacheOrder;
+    static constexpr size_t MAX_CACHE_FRAMES = 5;
     size_t frameSize = 0;
-    std::vector<motioncam::Timestamp> frameList;
 
     std::vector<uint16_t> blackLevels;
     double whiteLevel = 0.0;
@@ -70,7 +69,7 @@ struct FSContext {
     std::vector<uint8_t> audioWavData;
     size_t               audioSize = 0;
 
-    std::string baseName;
+    std::string mcrawBaseName;
 };
 
 static std::map<std::string, FSContext> contexts;
@@ -118,27 +117,17 @@ static std::string frameName(const std::string &base, int i)
 static int load_frame(FSContext *ctx, const std::string &path, size_t* size)
 {
     // fast‐path if cached
-    if (ctx->frameCache.count(path))
+    if (ctx->dngFileNameToFrameCache.count(path))
         return 0;
 
-    // find the frame index
-    int idx = -1;
-    for (size_t i = 0; i < ctx->filenames.size(); ++i)
-        if (ctx->filenames[i] == path)
-        {
-            idx = int(i);
-            break;
-        }
-    if (idx < 0)
-        return -ENOENT;
+    motioncam::Timestamp timestamp = ctx->dngFileNameToFrameTimestamp.at(path);
 
     // decode raw + per‐frame metadata
     std::vector<uint8_t> raw;
     nlohmann::json metadata;
     try
     {
-        auto ts = ctx->frameList[idx];
-        ctx->decoder->loadFrame(ts, raw, metadata);
+        ctx->decoder->loadFrame(timestamp, raw, metadata);
     }
     catch (std::exception &e)
     {
@@ -211,15 +200,15 @@ static int load_frame(FSContext *ctx, const std::string &path, size_t* size)
     }
 
     // insert into rolling‐buffer cache
-    if (ctx->frameCache.size() >= FSContext::MAX_CACHE_FRAMES)
+    if (ctx->dngFileNameToFrameCache.size() >= FSContext::MAX_CACHE_FRAMES)
     {
-        ctx->frameCache.erase(ctx->frameCacheOrder.front());
+        ctx->dngFileNameToFrameCache.erase(ctx->frameCacheOrder.front());
         ctx->frameCacheOrder.pop_front();
     }
-    ctx->frameCache[path] = oss.str();
+    ctx->dngFileNameToFrameCache[path] = oss.str();
     ctx->frameCacheOrder.push_back(path);
 
-    (*size) = ctx->frameCache[path].size();
+    (*size) = ctx->dngFileNameToFrameCache[path].size();
 
     return 0;
 }
@@ -227,9 +216,6 @@ static int load_frame(FSContext *ctx, const std::string &path, size_t* size)
 // report uniform size (0 until we have it)
 static int fs_getattr(const char *path, struct stat *st)
 {
-    // path == "/"                -> root
-    // path == "/<base>"          -> directory for each mcraw
-    // path == "/<base>/<frame>"  -> file
     std::string p(path);
     memset(st, 0, sizeof(*st));
 
@@ -240,44 +226,35 @@ static int fs_getattr(const char *path, struct stat *st)
     }
 
     // strip leading "/"
-    std::string rest = p.substr(1);
-    auto slash = rest.find('/');
+    auto slash = p.find('/', 1);
     if (slash == std::string::npos) {
-        // first‐level entry must be one of the mcraw basenames
-        if (contexts.count(rest)) {
-            st->st_mode = S_IFDIR | 0555;
-            st->st_nlink = 2;
-            return 0;
-        }
-        return -ENOENT;
+        std::string base = p.substr(1);
+        if (!contexts.count(base))
+            return -ENOENT;
+        st->st_mode = S_IFDIR | 0555;
+        st->st_nlink = 2;
+        return 0;
     }
 
-    // deeper: must be a frame file in that context
-    std::string base = rest.substr(0, slash);
-    std::string fname = rest.substr(slash + 1);
+    std::string base = p.substr(1, slash - 1);
+    std::string name = p.substr(slash + 1);
     auto it = contexts.find(base);
     if (it == contexts.end())
         return -ENOENT;
     FSContext &ctx = it->second;
 
-    // if they asked for "<base>.wav"
-    std::string audioName = "audio.wav";
-    if (fname == audioName) {
-        if (ctx.audioSize == 0)
-            return -ENOENT;
-        st->st_mode = S_IFREG | 0444;
-        st->st_nlink = 1;
-        st->st_size = (off_t)ctx.audioSize;
-        return 0;
-    }
-
-    // else must be one of the frame DNGs
-    if (std::find(ctx.filenames.begin(), ctx.filenames.end(), fname) == ctx.filenames.end())
-        return -ENOENT;
-
     st->st_mode = S_IFREG | 0444;
     st->st_nlink = 1;
-    st->st_size = (off_t)ctx.frameSize;
+    if (name == "audio.wav") {
+        st->st_size = (off_t)ctx.audioSize;
+    }
+    else if (ctx.dngFileNameToFrameTimestamp.count(name)) {
+        st->st_size = (off_t)ctx.frameSize;
+    }
+    else {
+        return -ENOENT;
+    }
+
     return 0;
 }
 
@@ -309,12 +286,12 @@ static int fs_readdir(const char *path, void *buf,
     filler(buf, "..", nullptr, 0);
 
     // list frames
-    for (auto &f : ctx.filenames)
-        filler(buf, f.c_str(), nullptr, 0);
+    for (auto &f : ctx.dngFileNameToFrameTimestamp)
+        filler(buf, f.first.c_str(), nullptr, 0);
 
     // list the audio file
     if (ctx.audioSize) {
-        std::string audioName = ctx.baseName + ".wav";
+        std::string audioName = "audio.wav";
         filler(buf, audioName.c_str(), nullptr, 0);
     }
 
@@ -340,13 +317,13 @@ static int fs_open(const char *path, struct fuse_file_info *fi)
     FSContext &ctx = it->second;
 
     // allow read‐only audio.wav
-    std::string audioName = ctx.baseName + ".wav";
+    std::string audioName = "audio.wav";
     if (fname == audioName) {
         return (fi->flags & 3) == O_RDONLY ? 0 : -EACCES;
     }
 
     // otherwise fall through to DNG frames
-    if (std::find(ctx.filenames.begin(), ctx.filenames.end(), fname) == ctx.filenames.end())
+    if (!ctx.dngFileNameToFrameTimestamp.count(fname))
         return -ENOENT;
     if ((fi->flags & 3) != O_RDONLY)
         return -EACCES;
@@ -375,7 +352,7 @@ static int fs_read(const char *path,
     FSContext &ctx = it->second;
 
     // if it's the wav file, serve the buffer
-    std::string audioName = ctx.baseName + ".wav";
+    std::string audioName = "audio.wav";
     if (fname == audioName) {
         if ((size_t)offset >= ctx.audioSize)
             return 0;
@@ -389,8 +366,8 @@ static int fs_read(const char *path,
     int err = load_frame(&ctx, fname, &unneeded);
     if (err < 0)
         return err;
-    auto it2 = ctx.frameCache.find(fname);
-    if (it2 == ctx.frameCache.end())
+    auto it2 = ctx.dngFileNameToFrameCache.find(fname);
+    if (it2 == ctx.dngFileNameToFrameCache.end())
         return -ENOENT;
     const std::string &data = it2->second;
     if ((size_t)offset >= data.size())
@@ -435,7 +412,7 @@ int main(int argc, char *argv[])
             std::cout << "Found file: " << fullPath << "\n";
 
             FSContext ctx;
-            ctx.baseName = baseName;
+            ctx.mcrawBaseName = baseName;
             try {
                 // pass the absolute path into the decoder
                 ctx.decoder = new motioncam::Decoder(fullPath);
@@ -447,21 +424,21 @@ int main(int argc, char *argv[])
             }
 
             // preload frames + metadata
-            ctx.frameList         = ctx.decoder->getFrames();
+            auto frameList         = ctx.decoder->getFrames();
             nlohmann::json containerMetadata = ctx.decoder->getContainerMetadata();
             cache_container_metadata(&ctx, &containerMetadata);
 
             std::cerr << "INFO: [" << fullPath << "] found "
-                 << ctx.frameList.size() << " frames\n";
+                 << frameList.size() << " frames\n";
 
             // prepare filename list
-            for (size_t i = 0; i < ctx.frameList.size(); ++i) {
-                ctx.filenames.push_back(frameName(baseName, int(i)));
+            for (size_t i = 0; i < frameList.size(); ++i) {
+                ctx.dngFileNameToFrameTimestamp.insert({frameName(baseName, int(i)), frameList[i]});
             }
 
             // warm up first frame
-            if (!ctx.filenames.empty()) {
-                load_frame(&ctx, ctx.filenames[0], &ctx.frameSize);
+            if (!ctx.dngFileNameToFrameTimestamp.empty()) {
+                load_frame(&ctx, frameName(baseName, 0), &ctx.frameSize);
             }
 
             // ------------------------------------------------------------------
