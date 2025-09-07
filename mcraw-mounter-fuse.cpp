@@ -55,7 +55,7 @@ struct FSContext {
     std::map<std::string, motioncam::Timestamp> dngFileNameToFrameTimestamp;
     std::map<std::string, std::vector<char>> dngFileNameToFrameCache;
     std::deque<std::string> frameCacheOrder;
-    static constexpr size_t MAX_CACHE_FRAMES = 5;
+    static constexpr size_t MAX_CACHE_FRAMES = 3;
     size_t frameSize = 0;
 
     std::vector<uint16_t> blackLevels;
