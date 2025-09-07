@@ -52,7 +52,6 @@ bool getAudio(
 
 struct FSContext {
     motioncam::Decoder *decoder = nullptr;
-    nlohmann::json containerMetadata;
     std::vector<std::string> filenames;
     std::map<std::string, std::string> frameCache;
     static constexpr size_t MAX_CACHE_FRAMES = 5;
@@ -77,24 +76,23 @@ struct FSContext {
 static std::map<std::string, FSContext> contexts;
 
 // call this once, right after containerMetadata is set:
-static void cache_container_metadata(FSContext *ctx)
+static void cache_container_metadata(FSContext *ctx, nlohmann::json *containerMetadata)
 {
     // Black levels
-    std::vector<uint16_t> blackLevel = ctx->containerMetadata["blackLevel"];
-    ctx->blackLevels.clear();
+    std::vector<uint16_t> blackLevel = (*containerMetadata)["blackLevel"];
     ctx->blackLevels.reserve(blackLevel.size());
     for (float v : blackLevel)
         ctx->blackLevels.push_back(uint16_t(std::lround(v)));
 
     // White level
-    ctx->whiteLevel = ctx->containerMetadata["whiteLevel"];
+    ctx->whiteLevel = (*containerMetadata)["whiteLevel"];
 
     // CFA pattern
-    std::string sensorArrangement = ctx->containerMetadata["sensorArrangment"];
-    ctx->colorMatrix1 = ctx->containerMetadata["colorMatrix1"].get<std::vector<float>>();
-    ctx->colorMatrix2 = ctx->containerMetadata["colorMatrix2"].get<std::vector<float>>();
-    ctx->forwardMatrix1 = ctx->containerMetadata["forwardMatrix1"].get<std::vector<float>>();
-    ctx->forwardMatrix2 = ctx->containerMetadata["forwardMatrix2"].get<std::vector<float>>();
+    std::string sensorArrangement = (*containerMetadata)["sensorArrangment"];
+    ctx->colorMatrix1 = (*containerMetadata)["colorMatrix1"].get<std::vector<float>>();
+    ctx->colorMatrix2 = (*containerMetadata)["colorMatrix2"].get<std::vector<float>>();
+    ctx->forwardMatrix1 = (*containerMetadata)["forwardMatrix1"].get<std::vector<float>>();
+    ctx->forwardMatrix2 = (*containerMetadata)["forwardMatrix2"].get<std::vector<float>>();
 
     if (sensorArrangement == "rggb")
         ctx->cfa = {{0, 1, 1, 2}};
@@ -117,7 +115,7 @@ static std::string frameName(const std::string &base, int i)
 
 // decode one frame into frameCache[path]
 // after writing to cache, if this is the first frame, record its size
-static int load_frame(FSContext *ctx, const std::string &path)
+static int load_frame(FSContext *ctx, const std::string &path, size_t* size)
 {
     // fast‐path if cached
     if (ctx->frameCache.count(path))
@@ -221,11 +219,7 @@ static int load_frame(FSContext *ctx, const std::string &path)
     ctx->frameCache[path] = oss.str();
     ctx->frameCacheOrder.push_back(path);
 
-    // record frame‐size once
-    if (ctx->frameSize == 0)
-    {
-        ctx->frameSize = ctx->frameCache[path].size();
-    }
+    (*size) = ctx->frameCache[path].size();
 
     return 0;
 }
@@ -391,7 +385,8 @@ static int fs_read(const char *path,
     }
 
     // otherwise decode & serve a frame
-    int err = load_frame(&ctx, fname);
+    size_t unneeded = 0;
+    int err = load_frame(&ctx, fname, &unneeded);
     if (err < 0)
         return err;
     auto it2 = ctx.frameCache.find(fname);
@@ -453,10 +448,10 @@ int main(int argc, char *argv[])
 
             // preload frames + metadata
             ctx.frameList         = ctx.decoder->getFrames();
-            ctx.containerMetadata = ctx.decoder->getContainerMetadata();
-            cache_container_metadata(&ctx);
+            nlohmann::json containerMetadata = ctx.decoder->getContainerMetadata();
+            cache_container_metadata(&ctx, &containerMetadata);
 
-            std::cerr << "DEBUG: [" << fullPath << "] found "
+            std::cerr << "INFO: [" << fullPath << "] found "
                  << ctx.frameList.size() << " frames\n";
 
             // prepare filename list
@@ -466,7 +461,7 @@ int main(int argc, char *argv[])
 
             // warm up first frame
             if (!ctx.filenames.empty()) {
-                load_frame(&ctx, ctx.filenames[0]);
+                load_frame(&ctx, ctx.filenames[0], &ctx.frameSize);
             }
 
             // ------------------------------------------------------------------
