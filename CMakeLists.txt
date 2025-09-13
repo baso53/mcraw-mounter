@@ -25,7 +25,9 @@ set(ENV{PKG_CONFIG_PATH}
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBFUSE2 REQUIRED fuse)
 
-include_directories(motioncam_decoder lib/include thirdparty ${LIBFUSE2_INCLUDE_DIRS})
+file(GLOB SRC_FILES "src/*.cpp")
+
+include_directories(motioncam_decoder deps/bw64/include/bw64 include lib/include thirdparty ${LIBFUSE2_INCLUDE_DIRS})
 
 link_directories(${LIBFUSE2_LIBRARY_DIRS})
 
@@ -38,6 +40,6 @@ set_property(TARGET motioncam_decoder PROPERTY POSITION_INDEPENDENT_CODE ON)
 # ---------------------------------------------------------------
 # 4) Our mcraw-mounter-fuse executable
 # ---------------------------------------------------------------
-add_executable(mcraw-mounter-fuse mcraw-mounter-fuse.cpp)
+add_executable(mcraw-mounter-fuse mcraw-mounter-fuse.cpp  ${SRC_FILES})
 
 target_link_libraries(mcraw-mounter-fuse PRIVATE motioncam_decoder ${LIBFUSE2_LIBRARIES})
