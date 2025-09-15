@@ -1989,74 +1989,33 @@ static bool IFDComparator(const IFDTag &a, const IFDTag &b) {
   return (a.tag < b.tag);
 }
 
-bool DNGImage::WriteDataToStream(std::ostream *ofs) const {
-  if ((data_buf_.size() == 0)) {
-    err_ += "Empty IFD data and image data.\n";
-    return false;
-  }
+bool DNGImage::WriteDataToStream(std::ostream *ofs) const
+{
+    if (bits_per_samples_.empty())
+        { err_ += "BitsPerSample is not set\n"; return false; }
 
-  if (bits_per_samples_.empty()) {
-    err_ += "BitsPerSample is not set\n";
-    return false;
-  }
+    // We are allowed to destroy the contents, so cast away constness.
+    auto &buf = const_cast<std::vector<char>&>(data_buf_);
 
-  for (size_t i = 0; i < bits_per_samples_.size(); i++) {
-    if (bits_per_samples_[i] == 0) {
-      err_ += std::to_string(i) + "'th BitsPerSample is zero";
-      return false;
+    // Byte-swap in place if necessary
+    if (swap_endian_ && data_strip_bytes_)
+    {
+        uint32_t bps = bits_per_samples_[0];
+        char *p = buf.data() + data_strip_offset_;
+        size_t n = data_strip_bytes_;
+
+        if (bps == 16)
+            for (size_t i = 0; i < n; i += 2) std::swap(p[i], p[i+1]);
+        else if (bps == 32)
+            for (size_t i = 0; i < n; i += 4) { std::swap(p[i],p[i+3]); std::swap(p[i+1],p[i+2]); }
+        else if (bps == 64)
+            for (size_t i = 0; i < n; i += 8) { std::swap(p[i],p[i+7]); std::swap(p[i+1],p[i+6]);
+                                                std::swap(p[i+2],p[i+5]); std::swap(p[i+3],p[i+4]); }
     }
-  }
 
-  if (samples_per_pixels_ == 0) {
-    err_ += "SamplesPerPixels is not set or zero.";
-    return false;
-  }
-
-  std::vector<uint8_t> data(data_buf_.size());
-  memcpy(data.data(), data_buf_.data(), data.size());
-
-  if (data_strip_bytes_ == 0) {
-    // May ok?.
-  } else {
-    // FIXME(syoyo): Assume all channels use sample bps
-    uint32_t bps = bits_per_samples_[0];
-
-    // We may need to swap endian for pixel data.
-    if (swap_endian_) {
-      if (bps == 16) {
-        size_t n = data_strip_bytes_ / sizeof(uint16_t);
-        uint16_t *ptr =
-            reinterpret_cast<uint16_t *>(data.data() + data_strip_offset_);
-
-        for (size_t i = 0; i < n; i++) {
-          swap2(&ptr[i]);
-        }
-
-      } else if (bps == 32) {
-        size_t n = data_strip_bytes_ / sizeof(uint32_t);
-        uint32_t *ptr =
-            reinterpret_cast<uint32_t *>(data.data() + data_strip_offset_);
-
-        for (size_t i = 0; i < n; i++) {
-          swap4(&ptr[i]);
-        }
-
-      } else if (bps == 64) {
-        size_t n = data_strip_bytes_ / sizeof(uint64_t);
-        uint64_t *ptr =
-            reinterpret_cast<uint64_t *>(data.data() + data_strip_offset_);
-
-        for (size_t i = 0; i < n; i++) {
-          swap8(&ptr[i]);
-        }
-      }
-    }
-  }
-
-  ofs->write(reinterpret_cast<const char *>(data.data()),
-             static_cast<std::streamsize>(data.size()));
-
-  return true;
+    // One single write, no extra copy
+    ofs->write(buf.data(), static_cast<std::streamsize>(buf.size()));
+    return true;
 }
 
 bool DNGImage::WriteIFDToStream(const unsigned int data_base_offset,
