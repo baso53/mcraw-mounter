@@ -420,6 +420,8 @@ class DNGImage {
 
   std::string Error() const { return err_; }
 
+  bool WriteToStream(std::ostream& ofs, std::string *err, const unsigned char *data, const size_t data_length);
+
  private:
    // this will hold your raw bytes
   std::vector<char>         data_buf_;
@@ -2096,6 +2098,57 @@ bool DNGImage::WriteIFDToStream(const unsigned int data_base_offset,
     ofs->write(ifd_buf_.data(),
                static_cast<std::streamsize>(ifd_buf_.size()));
   }
+
+  return true;
+}
+
+bool DNGImage::WriteToStream(std::ostream& ofs, std::string *err, const unsigned char *data, const size_t data_length) {
+  data_strip_offset_ = size_t(data_os_.tellp());
+
+  // NOTE: STRIP_OFFSET tag will be written at `WriteIFDToStream()`.
+  {
+    unsigned int count = 1;
+    unsigned int bytes = static_cast<unsigned int>(data_length);
+
+    WriteTIFFTag(
+        static_cast<unsigned short>(TIFFTAG_STRIP_BYTE_COUNTS), TIFF_LONG,
+        count, reinterpret_cast<const unsigned char *>(&bytes), &ifd_tags_,
+        NULL);
+
+    num_fields_++;
+  }
+
+  WriteTIFFVersionHeader(&ofs, dng_big_endian_);
+
+  // 1. Compute offset and data size(exclude TIFF header bytes)
+  size_t data_len = data_buf_.size() + data_length;
+  size_t data_offset_table = 0;
+  size_t strip_offset_table = data_strip_offset_;
+
+  // 2. Write offset to ifd table.
+  const unsigned int ifd_offset =
+      kHeaderSize + static_cast<unsigned int>(data_len);
+  Write4(ifd_offset, &ofs, swap_endian_);
+
+  // 4. Write image and meta data
+  // TODO(syoyo): Write IFD first, then image/meta data
+  if (bits_per_samples_.empty())
+    { err_ += "BitsPerSample is not set\n"; return false; }
+
+  // One single write, no extra copy
+  ofs.write(data_buf_.data(), static_cast<std::streamsize>(data_buf_.size()));
+
+  ofs.write(reinterpret_cast<const char *>(data), static_cast<std::streamsize>(data_length));
+
+  // 5. Write IFD entries;
+  this->WriteIFDToStream(
+      static_cast<unsigned int>(data_offset_table),
+      static_cast<unsigned int>(strip_offset_table), &ofs);
+
+  // Write zero as IFD offset(= end of data)
+  unsigned int next_ifd_offset = 0;
+
+  ofs.write(reinterpret_cast<const char *>(&next_ifd_offset), 4);
 
   return true;
 }
