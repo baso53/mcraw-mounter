@@ -234,6 +234,39 @@ namespace motioncam {
         }
     }
 
+    void Decoder::loadFrameMetadata(const Timestamp timestamp, nlohmann::json& outMetadata) {
+        if(mFrameOffsetMap.find(timestamp) == mFrameOffsetMap.end())
+            throw IOException("Frame not found (timestamp: " + std::to_string(timestamp) + ")");
+        
+        int64_t offset = mFrameOffsetMap.at(timestamp).offset;
+        
+        if(FSEEK(mFile, offset, SEEK_SET) != 0)
+            throw IOException("Invalid offset");
+        
+        Item bufferItem{};
+        read(&bufferItem, sizeof(Item));
+
+        if(bufferItem.type != Type::BUFFER)
+            throw IOException("Invalid buffer type");
+
+        mTmpBuffer.resize(bufferItem.size);
+
+        read(mTmpBuffer.data(), bufferItem.size);
+                
+        // Get metadata
+        Item metadataItem{};
+        read(&metadataItem, sizeof(Item));
+        
+        if(metadataItem.type != Type::METADATA)
+            throw IOException("Invalid metadata");
+        
+        std::vector<uint8_t> metadataJson(metadataItem.size);
+        read(metadataJson.data(), metadataItem.size);
+        
+        std::string metadataString = std::string(metadataJson.begin(), metadataJson.end());
+        outMetadata = nlohmann::json::parse(metadataString);       
+    }
+
     void Decoder::readIndex() {
         // Seek to index item
         if(FSEEK(mFile, -static_cast<long>(sizeof(BufferIndex) + sizeof(Item)), SEEK_END) != 0)
