@@ -15,6 +15,8 @@
  */
 
 #include <iostream>
+#include <fstream>
+#include <chrono>
 
 #include <motioncam/Decoder.hpp>
 #include <audiofile/AudioFile.h>
@@ -77,7 +79,6 @@ void writeDng(
     dng.SetBigEndian(false);
     dng.SetDNGVersion(1, 4, 0, 0);
     dng.SetDNGBackwardVersion(1, 1, 0, 0);
-    dng.SetImageData(reinterpret_cast<const unsigned char*>(data.data()), data.size());
     dng.SetImageWidth(width);
     dng.SetImageLength(height);
     dng.SetPlanarConfig(tinydngwriter::PLANARCONFIG_CONTIG);
@@ -131,11 +132,8 @@ void writeDng(
 
     // Write DNG
     std::string err;
-    tinydngwriter::DNGWriter writer(false);
-
-    writer.AddImage(&dng);
-
-    writer.WriteToFile(outputPath.c_str(), &err);
+    std::ofstream outFile("outfile.dng");
+    dng.WriteToFile(outFile, &err, reinterpret_cast<const unsigned char*>(data.data()), data.size());
 }
 
 int main(int argc, const char * argv[]) {
